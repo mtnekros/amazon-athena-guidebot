@@ -1,8 +1,13 @@
-"""Loading and Saving the Amazon Athena User Guide to Vector Database."""
+import os
+
+os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
+
+import re
+
 import links
-from langchain.text_splitter import HTMLHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_community.document_loaders import PDFMinerPDFasHTMLLoader, PyPDFLoader
+from langchain_community.document_loaders import WebBaseLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 
 persist_directory = "./stores/"
@@ -11,17 +16,25 @@ store = Chroma(
     collection_name="athena-user-guides",
     persist_directory=persist_directory,
 )
-if not store._collection.count():
-    pdf_path = "./pdfs/athena-ug.pdf"
-    loader = PyPDFLoader(file_path=pdf_path)
-    docs = loader.load()
+
+def remove_extra_lines(text: str) -> str:
+    """Remove extra lines."""
+    return re.sub(r"\n\n+", "\n\n", text).strip()
+
+def load_data() -> None:
+    """Load data into chroma db using ATHENA USER GUIDE LINKS."""
+    loader = WebBaseLoader(web_paths=links.user_guide_links)
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2500,
-        chunk_overlap=500,
+        chunk_size=2000,
+        chunk_overlap=400,
         separators=["\n\n", "\n", ".", " "],
     )
-    splitted_chunks = text_splitter.split_documents(documents=docs)
-    store.add_documents(splitted_chunks)
+    for doc in loader.lazy_load():
+        doc.page_content = remove_extra_lines(doc.page_content)
+        splitted_docs = text_splitter.split_documents(documents=[doc])
+        if splitted_docs:
+            store.add_documents(splitted_docs)
+            print(f"Added {len(splitted_docs)} documents from {splitted_docs[0].metadata}")
 
 def search(query: str, k: int=5) -> None:
     """Search for related text in the store using similarity search."""
@@ -30,21 +43,4 @@ def search(query: str, k: int=5) -> None:
         print(f"Results {i}")
         print(f"Text:, {result.page_content}")
         print(f"Metadata: {result.metadata}\n")
-
-def split_pdf_using_headers() -> None:
-    """Split the pdf using header."""
-    pdf_path = "./pdfs/athena-ug.pdf"
-    print("Initializing PDFMinerPDFasHTMLLoader")
-    loader = PDFMinerPDFasHTMLLoader(file_path=pdf_path)
-    print("Initializing HTMLHeaderTextSplitter")
-    splitter = HTMLHeaderTextSplitter([("h1", "H1"), ("h2", "H2"), ("h3", "H3")])
-    print("Loading HTML from PDF")
-    documents = loader.load()
-    splitted_docs = []
-    print("Splitting by headers")
-    for doc in documents:
-        splitted_docs.extend(splitter.split_text(doc.page_content))
-    # Maybe add the CharacterTextSplitter here again
-    print("Adding the documents to the store")
-    store.add_texts(splitted_docs)
 
