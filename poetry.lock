@@ -1478,6 +1478,21 @@ tokenizers = ">=0.19.1"
 transformers = ">=4.39.0"
 
 [[package]]
+name = "langchain-ollama"
+version = "0.2.0"
+description = "An integration package connecting Ollama and LangChain"
+optional = false
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "langchain_ollama-0.2.0-py3-none-any.whl", hash = "sha256:aa5b794599652494a07fd27b22784854480cd4c793f0db5e81ebeccc2affd135"},
+    {file = "langchain_ollama-0.2.0.tar.gz", hash = "sha256:250ad9f3edce1a0ca16e4fad19f783ac728d7d76888ba952c462cd9f680353f7"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.3.0,<0.4.0"
+ollama = ">=0.3.0,<1"
+
+[[package]]
 name = "langchain-text-splitters"
 version = "0.3.2"
 description = "LangChain text splitting utilities"
@@ -2294,6 +2309,20 @@ files = [
 rsa = ["cryptography (>=3.0.0)"]
 signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
+
+[[package]]
+name = "ollama"
+version = "0.3.3"
+description = "The official Python client for Ollama."
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "ollama-0.3.3-py3-none-any.whl", hash = "sha256:ca6242ce78ab34758082b7392df3f9f6c2cb1d070a9dede1a4c545c929e16dba"},
+    {file = "ollama-0.3.3.tar.gz", hash = "sha256:f90a6d61803117f40b0e8ff17465cab5e1eb24758a473cfe8101aff38bc13b51"},
+]
+
+[package.dependencies]
+httpx = ">=0.27.0,<0.28.0"
 
 [[package]]
 name = "onnxruntime"
@@ -4741,4 +4770,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3d2129e92b98243106a10e8d127c911b6727ae347ff8964b5f42fc0cd7a39af4"
+content-hash = "af93cbac3739c0ca569571d116e6b7d4001901a20b512a77dd8e4da4060bf8b3"
