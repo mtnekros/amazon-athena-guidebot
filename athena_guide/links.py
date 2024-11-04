@@ -1,4 +1,4 @@
-user_guide_links = [
+user_guide = [
     "https://aws.amazon.com/",
     "https://aws.amazon.com/contact-us/",
     "https://aws.amazon.com/legal/cookies/",
@@ -79,8 +79,7 @@ user_guide_links = [
     "https://docs.aws.amazon.com/athena/latest/ug/tables-qualifiers.html",
     "https://docs.aws.amazon.com/athena/latest/ug/understanding-tables-databases-and-the-data-catalog.html",
     "https://docs.aws.amazon.com/athena/latest/ug/using-athena-sql.html",
-    "https://docs.aws.amazon.com/athena/latest/ug/using-athena-sql.html#",
-    "https://docs.aws.amazon.com/athena/latest/ug/what-is.html",
+    # "https://docs.aws.amazon.com/athena/latest/ug/what-is.html",
     "https://docs.aws.amazon.com/athena/latest/ug/when-should-i-use-ate.html",
     "https://docs.aws.amazon.com/athena/latest/ug/work-with-data-stores.html",
     "https://docs.aws.amazon.com/athena/latest/ug/xacct-fed-query-enable.html",
@@ -89,11 +88,7 @@ user_guide_links = [
 ]
 
 boto_client = [
-    "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena.html#",
-    "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena.html#Athena.Client",
-    "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena.html#athena",
-    "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena.html#client",
-    "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena.html#paginators",
+    "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena.html",
     "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena/client/batch_get_named_query.html",
     "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena/client/batch_get_prepared_statement.html",
     "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena/client/batch_get_query_execution.html",

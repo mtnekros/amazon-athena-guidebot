@@ -38,7 +38,7 @@ def load_data() -> None:
     if store._collection.count():
         print("store already exists")
         return
-    loader = WebBaseLoader(web_paths=links.boto_client)
+    loader = WebBaseLoader(web_paths=list(set(links.all_links)))
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
     for doc in loader.lazy_load():
         doc.page_content = remove_extra_lines(doc.page_content)
@@ -58,7 +58,7 @@ def search(query: str, k: int=5) -> str:
 
 def get_sources_from_documents(documents: List[Document]) -> List[str]:
     """Get the source from the documnents."""
-    return [item.metadata["source"] for item in documents]
+    return list({item.metadata["source"] for item in documents})
 
 
 def main() -> None:
@@ -106,4 +106,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     load_data()
-    main()
+    # main()
