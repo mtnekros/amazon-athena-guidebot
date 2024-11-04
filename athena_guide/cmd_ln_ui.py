@@ -55,7 +55,8 @@ def main() -> None:
                 context = res_chunk["context"]
             if "answer" in res_chunk:
                 res_str += res_chunk["answer"]
-                print(res_chunk["answer"], end="", flush=True)
+                # print(res_chunk["answer"], end="", flush=True)
+            print(f"{res_chunk=}")
         print("\nSources:", get_sources_from_documents(context))
         history.extend([
             HumanMessage(user_msg_str),
