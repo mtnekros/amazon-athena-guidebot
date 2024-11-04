@@ -3,6 +3,7 @@ import os
 
 os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
 
+import json
 import re
 from typing import List
 
@@ -23,6 +24,16 @@ store = Chroma(
     persist_directory=persist_directory,
     collection_metadata={"hnsw:space": "cosine"},
 )
+example_store = Chroma(
+    embedding_function=HuggingFaceEmbeddings(
+        model_name="sentence-transformers/multi-qa-mpnet-base-dot-v1",
+        model_kwargs = {"device": "cuda:0"},
+    ),
+    collection_name="example-question-answers",
+    collection_metadata={"hnsw:space": "cosine"},
+    persist_directory=persist_directory,
+)
+
 
 def remove_extra_lines(text: str) -> str:
     """Remove extra lines."""
@@ -42,6 +53,18 @@ def load_data() -> None:
             store.add_documents(splitted_docs)
             print(f"Added {len(splitted_docs)} documents from {splitted_docs[0].metadata}")
 
+def load_examples() -> None:
+    """Load example for question answering."""
+    if example_store._collection.count():
+        print("example store already exists")
+        return
+    with open("./examples/question-answer-examples.json") as f:
+        examples = json.load(f)
+    for example in examples:
+        example_store.add_texts([str(example)])
+    print(f"Added {len(examples)} examples into the question answer store.")
+
+
 def search(query: str, k: int=5) -> str:
     """Search for related text in the store using similarity search."""
     results = store.similarity_search(query, k=k)
@@ -57,4 +80,6 @@ def get_sources_from_documents(documents: List[Document]) -> List[str]:
 
 
 if __name__ == "__main__":
-    load_data()
+    # load_data()
+    # load_examples()
+    pass
