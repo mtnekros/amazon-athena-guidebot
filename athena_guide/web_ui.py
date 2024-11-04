@@ -14,8 +14,8 @@ llm = OllamaLLM(
     base_url="http://localhost:11434",
 )
 retriever = store.as_retriever(
-    search_type="similarity",
-    search_kwargs={'k': 3}
+    search_type="similarity_score_threshold",
+    search_kwargs={"score_threshold": 0.5}
 )
 welcome_msg = "Hi! Please ask any questions related to Amazon Athena"
 system_prompt = """

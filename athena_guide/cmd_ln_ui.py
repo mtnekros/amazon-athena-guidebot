@@ -25,7 +25,10 @@ def main() -> None:
     """)
     history: List[BaseMessage] = [AIMessage(welcome_msg)]
     print(welcome_msg)
-    retriever = store.as_retriever(search_type="similarity", k=3)
+    retriever = store.as_retriever(
+        search_type="similarity_score_threshold",
+        search_kwargs={"score_threshold": 0.5}
+    )
     while True:
         user_msg_str = input("\nYou: ")
         if user_msg_str == "/exit":

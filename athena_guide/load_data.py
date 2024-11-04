@@ -21,6 +21,7 @@ store = Chroma(
     ),
     collection_name="athena-user-guides",
     persist_directory=persist_directory,
+    collection_metadata={"hnsw:space": "cosine"},
 )
 
 def remove_extra_lines(text: str) -> str:
