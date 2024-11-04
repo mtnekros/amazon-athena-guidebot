@@ -21,7 +21,10 @@ from langchain_ollama import OllamaLLM
 
 persist_directory = "./stores/"
 store = Chroma(
-    embedding_function=HuggingFaceEmbeddings(),
+    embedding_function=HuggingFaceEmbeddings(
+        model_name="sentence-transformers/multi-qa-mpnet-base-dot-v1",
+        model_kwargs = {"device": "cuda:0"},
+    ),
     collection_name="athena-user-guides",
     persist_directory=persist_directory,
 )
@@ -32,12 +35,11 @@ def remove_extra_lines(text: str) -> str:
 
 def load_data() -> None:
     """Load data into chroma db using ATHENA USER GUIDE LINKS."""
-    loader = WebBaseLoader(web_paths=links.user_guide_links)
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2000,
-        chunk_overlap=400,
-        separators=["\n\n", "\n", ".", " "],
-    )
+    if store._collection.count():
+        print("store already exists")
+        return
+    loader = WebBaseLoader(web_paths=links.boto_client)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
     for doc in loader.lazy_load():
         doc.page_content = remove_extra_lines(doc.page_content)
         splitted_docs = text_splitter.split_documents(documents=[doc])
@@ -57,7 +59,6 @@ def search(query: str, k: int=5) -> str:
 def get_sources_from_documents(documents: List[Document]) -> List[str]:
     """Get the source from the documnents."""
     return [item.metadata["source"] for item in documents]
-
 
 
 def main() -> None:
@@ -80,11 +81,13 @@ def main() -> None:
     while True:
         user_msg_str = input("\nYou: ")
         if user_msg_str == "/exit":
+            print("exiting chat")
             return
         if user_msg_str == "/clear":
             history = []
             print("history cleared")
             continue
+
         prompt = ChatPromptTemplate([
             ("system", system_prompt),
             MessagesPlaceholder("history"),
@@ -102,4 +105,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    load_data()
     main()
