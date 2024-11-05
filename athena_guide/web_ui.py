@@ -37,28 +37,44 @@ def get_system_prompt_with_example(user_question: str) -> str:
     )
     system_msg = dedent(f"""
         You are an AWS Athena Service Guide. Answer the user's
-        question about AWS Athena using the information in the message as context.
-        If the answer cannot be found in the message, just say "I don't know"
-        Do not hallucinate any false answer.
+        question about AWS Athena using the information in the <document> tag
+        as context. If the answer cannot be found in the document, just say
+        "I don't know" Do not hallucinate any false answer.
         <document>{{context}}</document>
         <example>{examples}</example>
 
         Answer as an AWS Athena expert. Start by breaking down the question,
         then provide detailed steps or relevant explanations.
     """)
+    print(system_msg)
     return system_msg
 
 def create_stand_alone_history_aware_prompt(history: List[BaseMessage], question: str) -> str:
     """Create a sub chain that reformulates the question to be history aware."""
     if not history:
         return question
-    contextualize_q_system_prompt = (
-        "Given a chat history and the latest user question "
-        "which might reference context in the chat history, "
-        "formulate a standalone question which can be understood "
-        "without the chat history. Do NOT answer the question, "
-        "just reformulate it if needed and otherwise return it as is."
-    )
+    contextualize_q_system_prompt = dedent("""
+        As the Contextual Question Reformulator, your sole task is to make each user
+        question fully understandable on its own, without relying on prior
+        conversation. Given the latest question and the conversation history, either
+        rephrase the question to be standalone or return it unchanged if it already
+        stands alone. Do not answer, add information, or seek clarification—simply
+        focus on rephrasing for standalone clarity when needed.
+
+        Example 1:
+        User: "Can you explain how partitioning works in Athena?"
+        System: Provides an explanation of partitioning in Athena.
+        User: "Does it improve query performance?"
+
+        "Does partitioning improve query performance in Amazon Athena?"
+
+        Example 2:
+        User: "Can you explain how partitioning works in Athena?"
+        System: Provides an explanation of partitioning in Athena.
+        User: "This is not correct."
+
+        "Your explanation of partitioning in Amazon Athena is not correct."
+    """)
     contextualize_q_prompt = ChatPromptTemplate.from_messages(
         [
             ("system", contextualize_q_system_prompt),

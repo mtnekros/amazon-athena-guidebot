@@ -13,27 +13,31 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_ollama import OllamaEmbeddings
 
 persist_directory = "./stores/"
+embeddings_st = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/multi-qa-mpnet-base-dot-v1",
+    model_kwargs = {"device": "cuda:0"},
+)
+embeddings_llama32 = OllamaEmbeddings(
+    model="llama3.2",
+    base_url="http://localhost:11434",
+)
+athena_docs_collection_st = "athena-user-guides" # not used at the moment
+athena_docs_collection_llama = "athena-user-guides-llama-3.2"
 store = Chroma(
-    embedding_function=HuggingFaceEmbeddings(
-        model_name="sentence-transformers/multi-qa-mpnet-base-dot-v1",
-        model_kwargs = {"device": "cuda:0"},
-    ),
-    collection_name="athena-user-guides",
+    embedding_function=embeddings_llama32,
+    collection_name=athena_docs_collection_llama,
     persist_directory=persist_directory,
     collection_metadata={"hnsw:space": "cosine"},
 )
 example_store = Chroma(
-    embedding_function=HuggingFaceEmbeddings(
-        model_name="sentence-transformers/multi-qa-mpnet-base-dot-v1",
-        model_kwargs = {"device": "cuda:0"},
-    ),
+    embedding_function=embeddings_st,
     collection_name="example-question-answers",
     collection_metadata={"hnsw:space": "cosine"},
     persist_directory=persist_directory,
 )
-
 
 def remove_extra_lines(text: str) -> str:
     """Remove extra lines."""
@@ -45,7 +49,7 @@ def load_data() -> None:
         print("store already exists")
         return
     loader = WebBaseLoader(web_paths=list(set(links.all_links)))
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
     for doc in loader.lazy_load():
         doc.page_content = remove_extra_lines(doc.page_content)
         splitted_docs = text_splitter.split_documents(documents=[doc])
