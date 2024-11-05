@@ -2,9 +2,10 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Iterator, List, cast
 
 import streamlit as st
-from langchain.chains import create_retrieval_chain
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
 from langchain_ollama import OllamaLLM
@@ -18,6 +19,7 @@ st.title("Amazon Athena Assistant")
 llm = OllamaLLM(
     model="llama3.2",
     base_url="http://localhost:11434",
+    temperature=0,
 )
 retriever = store.as_retriever(
     search_type="similarity_score_threshold",
@@ -40,10 +42,52 @@ def get_system_prompt_with_example(user_question: str) -> str:
         Do not hallucinate any false answer.
         <document>{{context}}</document>
         <example>{examples}</example>
+
+        Answer as an AWS Athena expert. Start by breaking down the question,
+        then provide detailed steps or relevant explanations.
     """)
-    from pprint import pprint
-    pprint(system_msg)
     return system_msg
+
+def create_stand_alone_history_aware_prompt(history: List[BaseMessage], question: str) -> str:
+    """Create a sub chain that reformulates the question to be history aware."""
+    if not history:
+        return question
+    contextualize_q_system_prompt = (
+        "Given a chat history and the latest user question "
+        "which might reference context in the chat history, "
+        "formulate a standalone question which can be understood "
+        "without the chat history. Do NOT answer the question, "
+        "just reformulate it if needed and otherwise return it as is."
+    )
+    contextualize_q_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", contextualize_q_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+    chain = contextualize_q_prompt | llm | StrOutputParser()
+    return chain.invoke({"chat_history": history, "input": question})
+
+def get_history_aware_retriever() -> Runnable:
+    """Create a sub chain that reformulates the question to be history aware."""
+    contextualize_q_system_prompt = (
+        "Given a chat history and the latest user question "
+        "which might reference context in the chat history, "
+        "formulate a standalone question which can be understood "
+        "without the chat history. Do NOT answer the question, "
+        "just reformulate it if needed and otherwise return it as is."
+    )
+    contextualize_q_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", contextualize_q_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+    return create_history_aware_retriever(
+        llm, retriever, contextualize_q_prompt
+    )
 
 # Initialize chat history
 if "st_history" not in st.session_state:
@@ -64,7 +108,7 @@ def stream_formatted_answer(_rag_chain: Runnable, _history: List[BaseMessage], _
     """Stream response from rag_chain."""
     context: List[Document] = []
     answer = ""
-    for chunk in _rag_chain.stream({"history": _history, "input": _input}):
+    for chunk in _rag_chain.stream({"chat_history": _history, "input": _input}):
         if "context" in chunk:
             context = chunk["context"]
         if "answer" in chunk:
@@ -88,15 +132,20 @@ if prompt := st.chat_input("Ask questions"):
             st.markdown(prompt)
         # Add user message to chat history
         st.session_state.st_history.append({"role": "user", "content": prompt})
-        get_system_prompt_with_example(prompt)
+        standalone_prompt = create_stand_alone_history_aware_prompt(st.session_state.message_history, prompt)
+        print(standalone_prompt)
         prompt_template = ChatPromptTemplate([
-            ("system", get_system_prompt_with_example(prompt)),
-            MessagesPlaceholder("history"),
+            ("system", get_system_prompt_with_example(standalone_prompt)),
+            MessagesPlaceholder("chat_history"),
             ("human", "{input}"),
         ])
         question_answer_chain = create_stuff_documents_chain(llm, prompt_template)
         rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-        response = st.write_stream(stream_formatted_answer(rag_chain, st.session_state.message_history, prompt))
+        response = st.write_stream(stream_formatted_answer(
+            _rag_chain=rag_chain,
+            _history=st.session_state.message_history,
+            _input=standalone_prompt,
+        ))
         st.session_state.st_history.append({"role": "assistant", "content": str(response)})
         st.session_state.message_history.extend([
             HumanMessage(prompt),
