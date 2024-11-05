@@ -1,6 +1,6 @@
 """Loading and Saving the Amazon Athena User Guide to Vector Database."""
-from langchain.text_splitter import HTMLHeaderTextSplitter, RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PDFMinerPDFasHTMLLoader, PyPDFLoader
+from langchain.text_splitter import HTMLHeaderTextSplitter
+from langchain_community.document_loaders import PDFMinerPDFasHTMLLoader
 from load_data import store
 
 
