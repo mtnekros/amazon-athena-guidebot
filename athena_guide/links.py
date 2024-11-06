@@ -170,7 +170,7 @@ boto_client = [
     "https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena/paginator/ListTagsForResource.html",
 ]
 
-athena_api_references = [
+athena_api_references = [ # can't access when js disabled
     "https://docs.aws.amazon.com/athena/latest/APIReference/API_AclConfiguration.html",
     "https://docs.aws.amazon.com/athena/latest/APIReference/API_ApplicationDPUSizes.html",
     "https://docs.aws.amazon.com/athena/latest/APIReference/API_AthenaError.html",
@@ -314,11 +314,12 @@ athena_api_references = [
 ]
 
 extra_blogs =[
-    "https://aws.amazon.com/blogs/big-data/top-10-performance-tuning-tips-for-amazon-athena/",
-    "https://aws.amazon.com/blogs/big-data/simplify-your-etl-and-ml-pipelines-using-the-amazon-athena-unload-feature/",
+    # "https://aws.amazon.com/blogs/big-data/top-10-performance-tuning-tips-for-amazon-athena/",
+    # "https://aws.amazon.com/blogs/big-data/simplify-your-etl-and-ml-pipelines-using-the-amazon-athena-unload-feature/",
     "https://aws.amazon.com/blogs/big-data/multicloud-data-lake-analytics-with-amazon-athena/",
     "https://aws.amazon.com/blogs/big-data/use-aws-glue-etl-to-perform-merge-partition-evolution-and-schema-evolution-on-apache-iceberg/",
     "https://aws.amazon.com/blogs/big-data/mastering-market-dynamics-transforming-transaction-cost-analytics-with-ultra-precise-tick-history-pcap-and-amazon-athena-for-apache-spark/",
 ]
 
+docs_links = [*user_guide, *boto_client, *athena_api_references ]
 all_links = [ *user_guide, *boto_client, *athena_api_references, *extra_blogs ]
