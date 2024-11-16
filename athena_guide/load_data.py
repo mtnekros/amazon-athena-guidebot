@@ -1,6 +1,9 @@
 """Athena User GuideBot."""
 import os
 
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import Runnable
+
 os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
 
 import json
@@ -12,8 +15,9 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_core.documents import Document
+from langchain_core.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings, OllamaLLM
 
 persist_directory = "./stores/"
 embeddings_st = HuggingFaceEmbeddings(
@@ -136,8 +140,118 @@ def get_sources_from_documents(documents: List[Document]) -> List[str]:
     """Get the source from the documnents."""
     return list({item.metadata["source"] for item in documents})
 
+def save_to_file(title: str, content: str) -> None:
+    """Create the file name from title and store the contents to local path."""
+    file_name = "".join(
+        "-" if char.isspace() else char.lower()
+        for char in title
+        if char.isalnum() or char.isspace()
+    )
+    with open(f"summarized/{file_name}.txt", "w") as f:
+        f.write(content)
+    print(f"Saved to {file_name}")
+
+def create_summarization_chain() -> Runnable:
+    """Return a prompt template | LLM chain."""
+    prompt = PromptTemplate.from_template("""
+    Summarize the following article in under 1,000 characters.
+    Focus on capturing main points, key arguments, and significant details.
+    Avoid less essential content and exclude information about authors.
+    Retain the primary message, key insights, and crucial takeaways.
+    Ensure information flows coherently, combining separate sections if they
+    appear to be disjointed or split up. Write with a tone of clarity, aiming
+    for conciseness while remaining informative.
+
+    Format: Directly respond with the summarized article text without
+    introductory phrases like "Here's the article in under 1,000 characters."
+    Tone: Professional and concise.
+
+    IMPORTANT: MAKE SURE THE RESPONSE IS UNDER 1000 CHARACTERS.
+
+    <text>{page_content}<text>
+    """)
+    llm = OllamaLLM(
+        model="llama3.2",
+        base_url="http://localhost:11434",
+        temperature=0,
+    )
+    return prompt | llm | StrOutputParser()
+
+def create_combiner_chain() -> Runnable:
+    """Return a prompt template | LLM chain."""
+    prompt = PromptTemplate.from_template("""
+    Task: Combine the mutliple articles provided int text tag into a single
+    coherent, concise & comprehensive article under 2,000 characters Focus on
+    capturing main points, key arguments, and significant details. Avoid less
+    essential content and exclude information about authors. Write with a tone
+    of clarity, aiming for conciseness while remaining informative.
+    Format: Directly respond with the summarized article text without
+    introductory phrases like "Here's the article in under 1,000 characters."
+    Tone: Professional and concise.
+
+    <text>{page_content}<text>
+    """)
+    llm = OllamaLLM(
+        model="llama3.2",
+        base_url="http://localhost:11434",
+        temperature=0,
+    )
+    return prompt | llm | StrOutputParser()
+
+def create_shortener_chain() -> Runnable:
+    """Return a prompt template | LLM chain."""
+    prompt = PromptTemplate.from_template("""
+    I have a piece of text, and I need it to be concise and clear while keeping
+    only the relevant information. Please remove any unnecessary details,
+    repetitions, or filler words. Ensure the main message remains intact.
+
+    <text>{page_content}<text>
+    """)
+    llm = OllamaLLM(
+        model="llama3.2",
+        base_url="http://localhost:11434",
+        temperature=0,
+    )
+    return prompt | llm | StrOutputParser()
+
+
+def summarize_splitted_content(combiner_chain: Runnable, shortener_chain: Runnable, summarization_chain: Runnable, splitted_docs: List[Document]) -> str:
+    """Sumarize mutliple docs into one."""
+    concise_splits = []
+    for count, splitted_doc in enumerate(splitted_docs, start=1):
+        page_content = (
+            splitted_doc.metadata.get("title", "") +
+            splitted_doc.metadata.get("description", "") +
+            "\n\n" +
+            splitted_doc.page_content
+        )
+        concise_splits.append(
+            shortener_chain.invoke({"page_content": page_content})
+        )
+        print("\n### SHORTENING DONE:", count)
+
+    joined_splits = "\n".join(concise_splits)
+    save_to_file(f"joined-splits-{splitted_docs[0].metadata.get('title')}", joined_splits)
+    final_summary = combiner_chain.invoke({"page_content": joined_splits})
+    print('final_summary_done')
+    return final_summary
+
+def summarize_all_links() -> None:
+    """Summarize all links and save to local folder."""
+    loader = MainContentWebBaseLoader(web_paths=list(set(links.extra_blogs[:1])))
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=15_000, chunk_overlap=100)
+    summarization_chain = create_summarization_chain()
+    shortener_chain = create_shortener_chain()
+    combiner_chain = create_combiner_chain()
+    for doc in loader.lazy_load():
+        doc.page_content = remove_extra_white_spaces(doc.page_content)
+        splitted_docs = text_splitter.split_documents(documents=[doc])
+        summary = summarize_splitted_content(combiner_chain, shortener_chain, summarization_chain, splitted_docs)
+        save_to_file(doc.metadata["title"], summary)
+        save_to_file("Complete"+doc.metadata["title"], f"/n{'#'*100}/n".join(item.page_content for item in splitted_docs))
 
 if __name__ == "__main__":
-    load_data()
+    # load_data()
     # load_examples()
+    summarize_all_links()
     pass

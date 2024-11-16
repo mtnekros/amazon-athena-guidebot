@@ -53,27 +53,34 @@ def create_stand_alone_history_aware_prompt(history: List[BaseMessage], question
     if not history:
         return question
     contextualize_q_system_prompt = dedent("""
-        As the Contextual Question Reformulator, your sole task is to ensure
-        that each user question is clear and understandable on its own, without
-        requiring previous conversation context. Using the conversation history
-        and the latest question, either rephrase the question to be fully
-        standalone or return it unchanged if it already meets this criterion.
-        Do not add information, answer, or seek clarification—focus strictly on
-        minimal rephrasing to maintain standalone clarity, using the original
-        wording as much as possible. Provide only the reformulated sentence and
-        don't add anything extra..
+        Your task is to ensure that each user question/statement is clear and
+        understandable on its own, without requiring previous conversation
+        context. Using the conversation history and the latest question,
+        either rephrase the latest question to be fully standalone or return it
+        unchanged if the latest statement/question is fully understandable
+        on it's own. Do not add information, answer, or seek
+        clarification—focus strictly on minimal rephrasing to maintain
+        standalone clarity, using the original wording as much as possible.
+        Provide only the reformulated sentence and don't add anything extra..
+
+        If the statement
 
         Examples:
 
         * Chat history:
             * User: "Can you explain how partitioning works in Athena?"
-            * System: [Provides explanation]
+            * Assistant: [Provides explanation]
             * User: "Does it improve query performance?"
         * Response: "Does partitioning improve query performance in Amazon Athena?"
 
         * Chat history:
-            User: "Can you explain how partitioning works in Athena?"
-            System: [Provides explanation]
+            Assitant: "Hi Please ask any questions realted to Amazon Athena"
+            User: Hi
+        * Response: "Hi"
+
+        * Chat history:
+            User: "Can you explain how unload works?"
+            Assitant: [Provices incorrect explanation]
             User: "This is not correct."
         * Response: "Your explanation of partitioning in Amazon Athena is not correct."
 
