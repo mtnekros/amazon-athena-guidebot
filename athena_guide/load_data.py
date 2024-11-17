@@ -8,7 +8,7 @@ os.environ["USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) 
 
 import json
 import re
-from typing import Any, Iterator, List
+from typing import Any, Iterator, List, Set
 
 import links
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -185,18 +185,34 @@ def summarize_splitted_content(shortener_chain: Runnable, splitted_docs: List[Do
         ))
     return summarized_docs
 
+def get_source_links(_chroma: Chroma) -> Set[str]:
+    """Return source links that are already available in the store."""
+    return {
+        item["source"] for item in _chroma.get()["metadatas"]
+    }
+
+
 def save_summarized_docs_from_links() -> None:
-    """Summarize all links and save to local folder."""
-    loader = MainContentWebBaseLoader(web_paths=list(set(links.extra_blogs)))
+    """Summarize all links and save to local folder & the store."""
+    if store._collection.count():
+        print("store already exists")
+    already_processed_links = get_source_links(store)
+    links_to_process = set(links.all_links) - already_processed_links
+    print(f"already_processed_links: {len(already_processed_links)}, links_to_proces: {len(links_to_process)}")
+
+    loader = MainContentWebBaseLoader(web_paths=list(links_to_process))
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=15_000, chunk_overlap=100)
     shortener_chain = create_shortener_chain()
-    for doc in loader.lazy_load():
+    for i, doc in enumerate(loader.lazy_load(), start=1):
         doc.page_content = remove_extra_white_spaces(doc.page_content)
         splitted_docs = text_splitter.split_documents(documents=[doc])
         if splitted_docs:
             summarized_docs = summarize_splitted_content(shortener_chain, splitted_docs)
-            save_to_file(doc.metadata["title"], f"/n{'#'*100}/n".join(item.page_content for item in summarized_docs))
             store.add_documents(summarized_docs)
+
+        if i % 5 == 0:
+            print(f"Processed count: {i} Remaining: {len(links_to_process) - i}")
+    print("All webpages summarized & added to the store successfully")
 
 if __name__ == "__main__":
     # load_data()
